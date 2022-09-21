@@ -21,7 +21,7 @@ public class Symbols {
     @Override
     public String toString() {
         return symbolList.stream().map(e -> e.toString())
-                .collect(Collectors.joining(","));
+                .collect(Collectors.joining("\n"));
     }
 
 }

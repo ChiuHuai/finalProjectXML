@@ -33,13 +33,13 @@ public class MSTMBService {
         return mstmbList;
     }
 
-    public Symbol findByStockFromXML(String stockId){
-        String url = "http://systexdemo.ddns.net:443/Quote/Stock.jsp?stock="+ stockId;
-        RestTemplate restTemplate = new RestTemplate();
-        Symbols result = restTemplate.getForObject(url, Symbols.class);
-
-        return result.getSymbolList().get(0);
-    }
+//    public Symbol findByStockFromXML(String stockId){
+//        String url = "http://systexdemo.ddns.net:443/Quote/Stock.jsp?stock="+ stockId;
+//        RestTemplate restTemplate = new RestTemplate();
+//        Symbols result = restTemplate.getForObject(url, Symbols.class);
+//
+//        return result.getSymbolList().get(0);
+//    }
 
     @Cacheable(cacheNames = "stock", key = "#request.stock")
     public MSTMBResponse findByStock(MSTMBRequest request) {

@@ -12,7 +12,6 @@ import com.example.littleProject.model.MSTMBRepository;
 import com.example.littleProject.model.TCNUDRepository;
 import com.example.littleProject.model.entity.BSType;
 import com.example.littleProject.model.entity.HCMIO;
-import com.example.littleProject.model.entity.MSTMB;
 import com.example.littleProject.model.entity.TCNUD;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -50,7 +49,7 @@ public class TransactionService {
         List<Result> resultList = new ArrayList<>();
 
         if (null == request.getStock() || request.getStock().isBlank()) {
-            List<TCNUD> allTCNUDList = this.tcnudRepository.findByCustSeqAndBranchNo(request.getCustSeq(), request.getBranchNo());
+            List<TCNUD> allTCNUDList = tcnudRepository.findByCustSeqAndBranchNo(request.getCustSeq(), request.getBranchNo());
             //取出股票種類
             List<String> stockList = allTCNUDList.stream().map(e -> e.getStock())
                     .distinct()
@@ -64,25 +63,25 @@ public class TransactionService {
 //            //mstmb 沒有 -> 001 - 查無結果（message請回覆「查無符合資料」）
 //            return this.tool.statusResponseBuilder("001", "");
         } else {
-            List<TCNUD> TCNUDList = this.tcnudRepository.findByStockAndCustSeqAndBranchNo(
+            List<TCNUD> TCNUDList = tcnudRepository.findByStockAndCustSeqAndBranchNo(
                     request.getStock(), request.getCustSeq(), request.getBranchNo());
 
-            if (TCNUDList.size() == 0) return this.tool.statusResponseBuilder("001", "");//此人沒買該股票
+            if (TCNUDList.size() == 0) return tool.statusResponseBuilder("001", "");//此人沒買該股票
             resultList = TCNUDToResultList(request.getBranchNo(), request.getCustSeq(), request.getStock());
         }
 
         BigDecimal max = request.getMax();
         BigDecimal min = request.getMin();
         if (max != null && min != null && max.compareTo(min) < 0)
-            return this.tool.statusResponseBuilder("002", "min should not greater than max");
+            return tool.statusResponseBuilder("002", "min should not greater than max");
 
         if (max != null || min != null) {
-            List<? extends ResultResponse> rangeOfProfitMargin = this.findRangeOfProfitMargin(min, max, resultList);
-            if (rangeOfProfitMargin.size() == 0) return this.tool.statusResponseBuilder("001", "");
+            List<? extends ResultResponse> rangeOfProfitMargin = findRangeOfProfitMargin(min, max, resultList);
+            if (rangeOfProfitMargin.size() == 0) return tool.statusResponseBuilder("001", "");
             resultList = rangeOfProfitMargin.stream().map(e -> (Result) e).collect(Collectors.toList());
         }
 
-        return this.tool.statusResponseBuilder("000", "", resultList);
+        return tool.statusResponseBuilder("000", "", resultList);
     }
 
 
@@ -97,7 +96,7 @@ public class TransactionService {
         //當 request 沒有提供 stock
         if (null == request.getStock() || request.getStock().isBlank()) {
             //找出同個人買多少股票
-            List<TCNUD> allTCNUDList = this.tcnudRepository.findByCustSeqAndBranchNo(request.getCustSeq(), request.getBranchNo());
+            List<TCNUD> allTCNUDList = tcnudRepository.findByCustSeqAndBranchNo(request.getCustSeq(), request.getBranchNo());
             //取出股票種類
             stockList = allTCNUDList.stream().map(e -> e.getStock())
                     .distinct()
@@ -106,11 +105,11 @@ public class TransactionService {
 
             sumResultList = stockToSumResultList(request, stockList);
         } else {
-            List<TCNUD> TCNUDList = this.tcnudRepository.findByStockAndCustSeqAndBranchNo(
+            List<TCNUD> TCNUDList = tcnudRepository.findByStockAndCustSeqAndBranchNo(
                     request.getStock(), request.getCustSeq(), request.getBranchNo());
 
             if (TCNUDList.size() == 0) { //此人沒買該股票
-                return this.tool.statusResponseBuilder("001", "");
+                return tool.statusResponseBuilder("001", "");
             }
 
             stockList.add(request.getStock());
@@ -122,15 +121,15 @@ public class TransactionService {
         BigDecimal min = request.getMin();
 
         if (max != null && min != null && max.compareTo(min) < 0)
-            return this.tool.statusResponseBuilder("002", "min should not greater than max");
+            return tool.statusResponseBuilder("002", "min should not greater than max");
 
         if (max != null || min != null) {
-            List<? extends ResultResponse> rangeOfProfitMargin = this.findRangeOfProfitMargin(min, max, sumResultList);
+            List<? extends ResultResponse> rangeOfProfitMargin = findRangeOfProfitMargin(min, max, sumResultList);
             if (rangeOfProfitMargin.size() == 0)
-                return this.tool.statusResponseBuilder("001", "");
+                return tool.statusResponseBuilder("001", "");
             sumResultList = rangeOfProfitMargin.stream().map(e -> (SumResult) e).collect(Collectors.toList());
         }
-        return this.tool.statusResponseBuilder("000", "", sumResultList);
+        return tool.statusResponseBuilder("000", "", sumResultList);
 
     }
 
@@ -139,7 +138,7 @@ public class TransactionService {
     public StatusResponse buyStock(TransactionRequest request) {
         // HCMIO 和 TCNUD 都新增一筆
 
-        List<HCMIO> hcmioList = this.hcmioRepository.findByTradeDateAndBranchNoAndCustSeqAndDocSeq(request.getTradeDate(),
+        List<HCMIO> hcmioList = hcmioRepository.findByTradeDateAndBranchNoAndCustSeqAndDocSeq(request.getTradeDate(),
                 request.getBranchNo(), request.getCustSeq(), request.getDocSeq());
         if (hcmioList.size() > 0)
             return tool.statusResponseBuilder("002", "already exist in HCMIO, cannot create.");
@@ -153,7 +152,7 @@ public class TransactionService {
         Result result = new Result();
 
         //找到剛加的那筆，加入資料到 statusResponse 的 ResultList //findby 4 conditional
-        TCNUD tcnud = this.tcnudRepository.findByTradeDateAndBranchNoAndCustSeqAndDocSeq(request.getTradeDate(),
+        TCNUD tcnud = tcnudRepository.findByTradeDateAndBranchNoAndCustSeqAndDocSeq(request.getTradeDate(),
                 request.getBranchNo(), request.getCustSeq(), request.getDocSeq());
         result.setTradeDate(tcnud.getTradeDate());
         result.setDocSeq(tcnud.getDocSeq());
@@ -167,28 +166,35 @@ public class TransactionService {
         BigDecimal cost = tcnud.getCost();
         result.setCost(cost.setScale(0, RoundingMode.HALF_UP));
 
-        MSTMB mstmb = this.mstmbRepository.findByStock(request.getStock());
-        if (null == mstmb) { //要防 mstmb 沒資料
-            return this.tool.statusResponseBuilder("002", "this stock is not exist in MSTMB.");
-        }
-        result.setStockName(mstmb.getStockName());
+        //xml
+//        MSTMB mstmb = this.mstmbRepository.findByStock(request.getStock());
+//        if (null == mstmb) { //要防 mstmb 沒資料
+//            return this.tool.statusResponseBuilder("002", "this stock is not exist in MSTMB.");
+//        }
+//        result.setStockName(mstmb.getStockName());
+//        BigDecimal nowPrice = mstmb.getCurPrice().setScale(2, RoundingMode.HALF_UP);
 
-        BigDecimal nowPrice = mstmb.getCurPrice().setScale(2, RoundingMode.HALF_UP);
-        result.setNowprice(nowPrice); // from MSTMB
+        //xml
+        String stockName = tool.findByStockFromXML(request.getStock()).getShortname();
+        String dealPrice = tool.findByStockFromXML(request.getStock()).getDealprice();
+        BigDecimal nowPrice = new BigDecimal(dealPrice);
 
-        BigDecimal marketValue = this.tool.calcMarketValue(nowPrice, tcnud.getQty());
-        BigDecimal unrealProfit = this.tool.calcUnrealProfit(marketValue, tcnud.getCost());
+        result.setStockName(stockName);
+        result.setNowprice(nowPrice.setScale(2, RoundingMode.HALF_UP));
+
+        BigDecimal marketValue = tool.calcMarketValue(nowPrice, tcnud.getQty());
+        BigDecimal unrealProfit = tool.calcUnrealProfit(marketValue, tcnud.getCost());
 
         result.setMarketValue(marketValue.setScale(0, RoundingMode.HALF_UP));
         result.setUnrealProfit(unrealProfit.setScale(0, RoundingMode.HALF_UP));
 
         //profitMargin
-        String profitMargin = this.tool.calcProfitMargin(unrealProfit, cost);
+        String profitMargin = tool.calcProfitMargin(unrealProfit, cost);
         result.setProfitMargin(profitMargin);
 
         List<Result> resultList = new ArrayList<>();
         resultList.add(result);
-        return this.tool.statusResponseBuilder("000", "", resultList);
+        return tool.statusResponseBuilder("000", "", resultList);
     }
 
     //新增HCMIO
@@ -217,7 +223,7 @@ public class TransactionService {
         hcmio.setModTime(timeNow); //15
         hcmio.setModUser("HuaiChiu"); //16
 
-        this.hcmioRepository.save(hcmio);
+        hcmioRepository.save(hcmio);
         return hcmio;
 
     }
@@ -238,7 +244,7 @@ public class TransactionService {
         tcnud.setModDate(hcmio.getModDate()); //11
         tcnud.setModTime(hcmio.getModTime()); //12
         tcnud.setModUser(hcmio.getModUser()); //13
-        this.tcnudRepository.save(tcnud);
+        tcnudRepository.save(tcnud);
     }
 
     public String searchSettlement(String branchNo, String custSeq) {
@@ -267,13 +273,13 @@ public class TransactionService {
             int dayOfWeek = tempDate.getDayOfWeek().getValue();
             date = tempDate.format(formatter);
 
-            String Holiday = this.holidayRepository.findByHoliday(date);
+            String Holiday = holidayRepository.findByHoliday(date);
             if (null == Holiday && 6 != dayOfWeek && 7 != dayOfWeek) {
                 countDay++;
             }
         }
 
-        List<TCNUD> tcnudList = this.tcnudRepository.findByTradeDateAndBranchNoAndCustSeq(date, branchNo, custSeq);
+        List<TCNUD> tcnudList = tcnudRepository.findByTradeDateAndBranchNoAndCustSeq(date, branchNo, custSeq);
         if (tcnudList.isEmpty()) return message = "無股票需付款";//顧客沒買
 
         BigDecimal totalPay = tcnudList.stream().map(e -> e.getCost()).reduce(BigDecimal.ZERO, BigDecimal::add);
@@ -292,8 +298,8 @@ public class TransactionService {
 //            BigDecimal nowPrice = mstmb.getCurPrice(); //取得現價
 //            String stockName = mstmb.getStockName(); //取得 stockName
 
-            String stockName = mstmbService.findByStockFromXML(tcnud.getStock()).getShortname();
-            String dealPrice = mstmbService.findByStockFromXML(tcnud.getStock()).getDealprice();
+            String stockName = tool.findByStockFromXML(tcnud.getStock()).getShortname();
+            String dealPrice = tool.findByStockFromXML(tcnud.getStock()).getDealprice();
             BigDecimal nowPrice = new BigDecimal(dealPrice);
 
             result = new Result();
@@ -310,11 +316,11 @@ public class TransactionService {
             BigDecimal cost = tcnud.getCost();
             result.setCost(cost.setScale(0, RoundingMode.HALF_UP));//
 
-            result.setMarketValue(this.tool.calcMarketValue(nowPrice, tcnud.getQty()).setScale(0, RoundingMode.HALF_UP));
-            BigDecimal unrealProfit = this.tool.calcUnrealProfit(result.getMarketValue(), cost);
+            result.setMarketValue(tool.calcMarketValue(nowPrice, tcnud.getQty()).setScale(0, RoundingMode.HALF_UP));
+            BigDecimal unrealProfit = tool.calcUnrealProfit(result.getMarketValue(), cost);
             result.setUnrealProfit(unrealProfit.setScale(0, RoundingMode.HALF_UP));
 
-            result.setProfitMargin(this.tool.calcProfitMargin(unrealProfit, cost));
+            result.setProfitMargin(tool.calcProfitMargin(unrealProfit, cost));
 
             resultList.add(result);
 
@@ -328,11 +334,16 @@ public class TransactionService {
         Result result;
 
         for (String stock : stockList) {
-            MSTMB mstmb = this.mstmbRepository.findByStock(stock);
-            BigDecimal nowPrice = mstmb.getCurPrice().setScale(2, RoundingMode.HALF_UP); //取得現價
-            String stockName = mstmb.getStockName(); //取得 stockName
+//            MSTMB mstmb = this.mstmbRepository.findByStock(stock);
+//            BigDecimal nowPrice = mstmb.getCurPrice().setScale(2, RoundingMode.HALF_UP); //取得現價
+//            String stockName = mstmb.getStockName(); //取得 stockName
 
-            List<TCNUD> TCNUDList = this.tcnudRepository.findByStockAndCustSeqAndBranchNo(
+            //xml
+            String stockName = tool.findByStockFromXML(stock).getShortname();
+            String dealPrice = tool.findByStockFromXML(stock).getDealprice();
+            BigDecimal nowPrice = new BigDecimal(dealPrice);
+
+            List<TCNUD> TCNUDList = tcnudRepository.findByStockAndCustSeqAndBranchNo(
                     stock, request.getCustSeq(), request.getBranchNo());
 
             SumResult sumResult = new SumResult();
@@ -346,14 +357,14 @@ public class TransactionService {
 
             sumResult.setStock(stock);
             sumResult.setStockName(stockName);
-            sumResult.setNowprice(nowPrice);
+            sumResult.setNowprice(nowPrice.setScale(2, RoundingMode.HALF_UP));
             sumResult.setSumRemainQty(sumRemainQty);
             sumResult.setSumFee(sumFee);
             sumResult.setSumCost(sumCost.setScale(0, RoundingMode.HALF_UP));
             sumResult.setSumMarketValue(sumMarketValue.setScale(0, RoundingMode.HALF_UP));
             sumResult.setSumUnrealProfit(sumUnrealProfit.setScale(0, RoundingMode.HALF_UP));
 
-            String sumProfitMargin = this.tool.calcProfitMargin(sumUnrealProfit, sumCost);
+            String sumProfitMargin = tool.calcProfitMargin(sumUnrealProfit, sumCost);
             sumResult.setSumProfitMargin(sumProfitMargin);
 
             sumResult.setDetailList(resultList);
@@ -368,11 +379,11 @@ public class TransactionService {
             List<Result> resultList = resultResponseList.stream().map(resultResponse -> (Result) resultResponse).collect(Collectors.toList());
 
             return resultList.stream().filter(e ->
-                            this.profitMarginFilter(min, max, e.getProfitMargin()))
+                            profitMarginFilter(min, max, e.getProfitMargin()))
                     .collect(Collectors.toList());
         } else if (resultResponseList.get(0) instanceof SumResult) {
             List<SumResult> sumResultList = resultResponseList.stream().map(resultResponse -> (SumResult) resultResponse).collect(Collectors.toList());
-            return sumResultList.stream().filter(e -> this.profitMarginFilter(min, max, e.getSumProfitMargin()))
+            return sumResultList.stream().filter(e -> profitMarginFilter(min, max, e.getSumProfitMargin()))
                     .collect(Collectors.toList());
         }
         return null;

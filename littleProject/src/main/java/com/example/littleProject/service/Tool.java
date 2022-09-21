@@ -3,7 +3,10 @@ package com.example.littleProject.service;
 import com.example.littleProject.controller.dto.response.ResultResponse;
 import com.example.littleProject.controller.dto.response.StatusResponse;
 import com.example.littleProject.model.entity.BSType;
+import com.example.littleProject.model.entity.xml.Symbol;
+import com.example.littleProject.model.entity.xml.Symbols;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -103,6 +106,14 @@ public class Tool {
                     .build();
 
         }
+    }
+
+    public Symbol findByStockFromXML(String stockId){
+        String url = "http://systexdemo.ddns.net:443/Quote/Stock.jsp?stock="+ stockId;
+        RestTemplate restTemplate = new RestTemplate();
+        Symbols result = restTemplate.getForObject(url, Symbols.class);
+
+        return result.getSymbolList().get(0);
     }
 
 }
